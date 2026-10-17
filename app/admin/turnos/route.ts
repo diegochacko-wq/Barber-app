@@ -3,7 +3,6 @@ import sql from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
-    // Uso seguro de URL con un dominio base de respaldo para evitar fallos en compilación estática
     const url = new URL(request.url, 'http://localhost');
     const slug = url.searchParams.get('slug');
 
