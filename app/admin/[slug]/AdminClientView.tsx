@@ -2,14 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import NegocioForm from './NegocioForm';
 
 export default function AdminClientView({ slug }: { slug: string }) {
   const [negocio, setNegocio] = useState<any>(null);
   const [turnos, setTurnos] = useState<any[]>([]);
-  const [nuevoNombre, setNuevoNombre] = useState('');
   const [loading, setLoading] = useState(true);
-  const [guardando, setGuardando] = useState(false);
-  const [mensaje, setMensaje] = useState('');
 
   useEffect(() => {
     async function cargarDatos() {
@@ -18,7 +16,6 @@ export default function AdminClientView({ slug }: { slug: string }) {
         const dataNegocio = await resNegocio.json();
         if (dataNegocio.negocio) {
           setNegocio(dataNegocio.negocio);
-          setNuevoNombre(dataNegocio.negocio.nombre);
         }
 
         const resTurnos = await fetch(`/admin/turnos?slug=${slug}`);
@@ -35,32 +32,6 @@ export default function AdminClientView({ slug }: { slug: string }) {
 
     cargarDatos();
   }, [slug]);
-
-  async function handleActualizarNegocio(e: React.FormEvent) {
-    e.preventDefault();
-    setGuardando(true);
-    setMensaje('');
-
-    try {
-      const res = await fetch(`/api/negocio/${slug}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nuevoNombre }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setNegocio(data.negocio);
-        setMensaje('¡Nombre del local actualizado con éxito!');
-      } else {
-        setMensaje(data.error || 'Error al actualizar');
-      }
-    } catch (error) {
-      setMensaje('Error de conexión al actualizar');
-    } finally {
-      setGuardando(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -84,14 +55,24 @@ export default function AdminClientView({ slug }: { slug: string }) {
   return (
     <main className="min-h-screen bg-neutral-950 text-white p-6 md:p-12">
       <div className="max-w-4xl mx-auto space-y-8">
-        
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-800 pb-6">
-          <div>
-            <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20">
-              Panel de Administración
-            </span>
-            <h1 className="text-3xl font-extrabold mt-2">{negocio.nombre}</h1>
-            <p className="text-neutral-400 text-sm">Gestiona la configuración y los turnos de tu local.</p>
+          <div className="flex items-center gap-4">
+            {negocio.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={negocio.logo_url}
+                alt="Logo"
+                className="w-14 h-14 rounded-xl object-contain bg-neutral-900 border border-neutral-800"
+              />
+            )}
+            <div>
+              <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20">
+                Panel de Administración
+              </span>
+              <h1 className="text-3xl font-extrabold mt-2">{negocio.nombre}</h1>
+              <p className="text-neutral-400 text-sm">Gestiona la configuración y los turnos de tu local.</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Link
@@ -110,40 +91,7 @@ export default function AdminClientView({ slug }: { slug: string }) {
           </div>
         </div>
 
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <h2 className="text-lg font-bold text-neutral-200">Configuración del Local</h2>
-          
-          <form onSubmit={handleActualizarNegocio} className="space-y-4 max-w-lg">
-            <div>
-              <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-2">
-                Nombre del Negocio
-              </label>
-              <input
-                type="text"
-                value={nuevoNombre}
-                onChange={(e) => setNuevoNombre(e.target.value)}
-                className="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition-colors text-sm"
-                required
-              />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                type="submit"
-                disabled={guardando}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-colors shadow-lg"
-              >
-                {guardando ? 'Guardando...' : 'Guardar Cambios'}
-              </button>
-
-              {mensaje && (
-                <span className={`text-xs ${mensaje.includes('éxito') ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {mensaje}
-                </span>
-              )}
-            </div>
-          </form>
-        </div>
+        <NegocioForm slug={slug} negocio={negocio} onSaved={setNegocio} />
 
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-xl space-y-4">
           <h2 className="text-lg font-bold text-neutral-200">Turnos Agendados</h2>
@@ -171,7 +119,7 @@ export default function AdminClientView({ slug }: { slug: string }) {
                       <td className="py-3 px-3 text-neutral-400">{turno.cliente_telefono}</td>
                       <td className="py-3 px-3 text-neutral-300">{turno.servicio_nombre || 'General'}</td>
                       <td className="py-3 px-3 text-neutral-300">
-                        {new Date(turno.fecha_hora_inicio).toLocaleString()}
+                        {new Date(turno.fecha_hora_inicio).toLocaleString('es-AR')}
                       </td>
                       <td className="py-3 px-3">
                         <span className="px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">
