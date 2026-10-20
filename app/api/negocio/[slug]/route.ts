@@ -1,62 +1,56 @@
 import { NextResponse } from 'next/server';
 import { getSql } from '@/lib/db';
 
+// Obtener datos del negocio por slug
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: { slug: string } }
 ) {
   try {
+    const { slug } = await params;
     const sql = getSql();
+    const negocios = await sql`SELECT * FROM negocios WHERE slug = ${slug}`;
 
-    // 1. Resolver los parámetros de la URL de forma asíncrona
-    const resolvedParams = await params;
-    const slug = resolvedParams.slug;
-
-    // 2. Obtener la información del negocio
-    const negocio = await sql`
-      SELECT id, nombre, slug, whatsapp, tema_visual
-      FROM negocios
-      WHERE slug = ${slug}
-      LIMIT 1
-    `;
-
-    if (negocio.length === 0) {
-      return NextResponse.json(
-        { error: 'Negocio no encontrado' },
-        { status: 404 }
-      );
+    if (negocios.length === 0) {
+      return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
     }
 
-    const negocioData = negocio[0];
-
-    // 3. Obtener los servicios activos del negocio
-    const servicios = await sql`
-      SELECT id, nombre, duracion_minutos, precio
-      FROM servicios
-      WHERE negocio_id = ${negocioData.id} AND activo = true
-      ORDER BY precio ASC
-    `;
-
-    // 4. Obtener los horarios de atención del negocio
-    const horarios = await sql`
-      SELECT dia_semana, hora_inicio, hora_fin, activo
-      FROM horarios_atencion
-      WHERE negocio_id = ${negocioData.id} AND activo = true
-      ORDER BY dia_semana ASC
-    `;
-
-    // 5. Retornar la respuesta consolidada en JSON
-    return NextResponse.json({
-      negocio: negocioData,
-      servicios: servicios,
-      horarios: horarios
-    });
-
+    return NextResponse.json({ negocio: negocios[0] });
   } catch (error) {
-    console.error('Error al obtener datos del negocio:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    console.error('Error al obtener negocio:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  }
+}
+
+// Actualizar datos del negocio (Nombre, etc.)
+export async function PUT(
+  request: Request,
+  { params }: { params: { slug: string } }
+) {
+  try {
+    const { slug } = await params;
+    const body = await request.json();
+    const { nombre } = body;
+
+    if (!nombre) {
+      return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 });
+    }
+
+    const sql = getSql();
+    const actualizado = await sql`
+      UPDATE negocios 
+      SET nombre = ${nombre} 
+      WHERE slug = ${slug} 
+      RETURNING *
+    `;
+
+    if (actualizado.length === 0) {
+      return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, negocio: actualizado[0] });
+  } catch (error) {
+    console.error('Error al actualizar negocio:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
