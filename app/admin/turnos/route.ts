@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import { getSql } from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
+    const sql = getSql();
     const url = new URL(request.url, 'http://localhost');
     const slug = url.searchParams.get('slug');
 
