@@ -4,7 +4,7 @@ import { getSql } from '@/lib/db';
 // Obtener datos del negocio por slug
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const { slug } = await params;
@@ -25,7 +25,7 @@ export async function GET(
 // Actualizar datos del negocio (Nombre, etc.)
 export async function PUT(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const { slug } = await params;
