@@ -1,9 +1,6 @@
 import { Suspense } from 'react';
 import AdminClientView from './AdminClientView';
 
-// Desactivar pre-renderizado estático para rutas dinámicas en Next.js 16
-export const dynamic = 'force-dynamic';
-
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   
