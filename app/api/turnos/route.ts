@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import { getSql } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
+    const sql = getSql();
+
     const body = await request.json();
     const { negocio_id, servicio_id, cliente_nombre, cliente_telefono, fecha, hora } = body;
 

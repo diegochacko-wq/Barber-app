@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { Suspense, useEffect, useState, use } from 'react';
 
 interface Turno {
   id: string;
@@ -11,7 +11,7 @@ interface Turno {
   estado: string;
 }
 
-export default function AdminPanel({ params }: { params: Promise<{ slug: string }> }) {
+function AdminPanelContent({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,5 +139,13 @@ export default function AdminPanel({ params }: { params: Promise<{ slug: string 
         )}
       </section>
     </div>
+  );
+}
+
+export default function AdminPanel({ params }: { params: Promise<{ slug: string }> }) {
+  return (
+    <Suspense fallback={<p className="p-6 text-neutral-400">Cargando panel...</p>}>
+      <AdminPanelContent params={params} />
+    </Suspense>
   );
 }
