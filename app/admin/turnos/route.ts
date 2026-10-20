@@ -1,29 +1,54 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import { getSql } from '@/lib/db';
 
-export async function GET(request: Request) {
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: Request) {
   try {
-    const url = new URL(request.url, 'http://localhost');
-    const slug = url.searchParams.get('slug');
+    const sql = getSql();
 
-    if (!slug) {
-      return NextResponse.json({ error: 'Slug requerido' }, { status: 400 });
+    const body = await request.json();
+    const { negocio_id, servicio_id, cliente_nombre, cliente_telefono, fecha, hora } = body;
+
+    if (!negocio_id || !servicio_id || !cliente_nombre || !fecha || !hora) {
+      return NextResponse.json(
+        { error: 'Faltan campos obligatorios' },
+        { status: 400 }
+      );
     }
 
-    const turnos = await sql`
-      SELECT 
-        t.id, t.cliente_nombre, t.cliente_telefono, t.fecha_hora_inicio, t.estado,
-        s.nombre as servicio_nombre
-      FROM turnos t
-      JOIN negocios n ON t.negocio_id = n.id
-      LEFT JOIN servicios s ON t.servicio_id = s.id
-      WHERE n.slug = ${slug}
-      ORDER BY t.fecha_hora_inicio ASC
+    // Combinar fecha y hora para calcular inicio y fin
+    const fechaHoraInicio = new Date(`${fecha}T${hora}:00`);
+
+    // Obtener la duración del servicio
+    const servicio = await sql`
+      SELECT duracion_minutos FROM servicios WHERE id = ${servicio_id} LIMIT 1
     `;
 
-    return NextResponse.json({ turnos });
+    if (servicio.length === 0) {
+      return NextResponse.json({ error: 'Servicio no encontrado' }, { status: 404 });
+    }
+
+    const duracion = servicio[0].duracion_minutos;
+    const fechaHoraFin = new Date(fechaHoraInicio.getTime() + duracion * 60000);
+
+    // Guardar el turno en la base de datos
+    const nuevoTurno = await sql`
+      INSERT INTO turnos (
+        negocio_id, servicio_id, cliente_nombre, cliente_telefono, fecha_hora_inicio, fecha_hora_fin, estado
+      )
+      VALUES (
+        ${negocio_id}, ${servicio_id}, ${cliente_nombre}, ${cliente_telefono || ''}, ${fechaHoraInicio.toISOString()}, ${fechaHoraFin.toISOString()}, 'confirmado'
+      )
+      RETURNING id
+    `;
+
+    return NextResponse.json({ success: true, turnoId: nuevoTurno[0].id });
   } catch (error) {
-    console.error('Error al obtener turnos:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    console.error('Error al guardar turno:', error);
+    return NextResponse.json(
+      { error: 'Error interno del servidor al registrar el turno' },
+      { status: 500 }
+    );
   }
 }

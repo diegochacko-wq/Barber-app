@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
-import sql from '../../../../lib/db'; // Importación por defecto correcta
+import { getSql } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const sql = getSql();
+
     // 1. Resolver los parámetros de la URL de forma asíncrona
     const resolvedParams = await params;
     const slug = resolvedParams.slug;
