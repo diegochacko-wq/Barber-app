@@ -3,6 +3,9 @@
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 
+// Permitir renderizado dinámico en esta ruta
+export const instant = false;
+
 export default function AdminNegocioPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
   const slug = resolvedParams.slug;
