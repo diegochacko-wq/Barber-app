@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getSql } from '@/lib/db';
 
 export default async function Home() {
-  let negocios = [];
+  let negocios: Array<{ id: number; nombre: string; slug: string }> = [];
   try {
     const sql = getSql();
     negocios = await sql`SELECT id, nombre, slug FROM negocios ORDER BY nombre ASC`;
@@ -39,7 +39,7 @@ export default async function Home() {
             </p>
           ) : (
             <div className="space-y-3">
-              {negocios.map((negocio: any) => (
+              {negocios.map((negocio) => (
                 <div 
                   key={negocio.id} 
                   className="flex items-center justify-between p-4 bg-neutral-800/50 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl transition-all"
