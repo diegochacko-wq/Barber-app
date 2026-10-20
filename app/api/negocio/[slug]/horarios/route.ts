@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSql } from '@/lib/db';
+import { exigirAdmin } from '@/lib/auth';
 
 export async function GET(
   request: Request,
@@ -31,6 +32,8 @@ export async function PUT(
   try {
     const sql = getSql();
     const { slug } = await params;
+    const noAutorizado = exigirAdmin(request, slug);
+    if (noAutorizado) return noAutorizado;
     const { horarios } = await request.json();
 
     if (!Array.isArray(horarios)) {

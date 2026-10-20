@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSql } from '@/lib/db';
+import { exigirAdmin } from '@/lib/auth';
 
 const CAMPOS = [
   'nombre', 'direccion', 'telefono', 'whatsapp', 'email',
@@ -56,6 +57,8 @@ export async function PUT(
   try {
     const sql = getSql();
     const { slug } = await params;
+    const noAutorizado = exigirAdmin(request, slug);
+    if (noAutorizado) return noAutorizado;
     const body = await request.json();
 
     // Solo se actualizan los campos que llegan en el body
