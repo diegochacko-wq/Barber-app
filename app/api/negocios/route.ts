@@ -2,12 +2,10 @@ import { NextResponse } from 'next/server';
 import { getSql } from '@/lib/db';
 import crypto from 'crypto';
 
-// Hash de contraseña (SHA-256)
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Generar slug amigable
 function createSlug(text: string): string {
   return text
     .toString()
@@ -20,19 +18,6 @@ function createSlug(text: string): string {
     .replace(/\-\-+/g, '-');
 }
 
-// GET: Listar todos los negocios para la página principal
-export async function GET() {
-  try {
-    const sql = getSql();
-    const negocios = await sql`SELECT id, nombre, slug, telefono, email FROM negocios ORDER BY nombre ASC`;
-    return NextResponse.json(negocios);
-  } catch (error) {
-    console.error('Error al listar negocios:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
-  }
-}
-
-// POST: Registrar un nuevo negocio
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -56,6 +41,7 @@ export async function POST(request: Request) {
 
     const passwordHash = hashPassword(password);
 
+    // Intentamos hacer la inserción adaptable
     const nuevoNegocio = await sql`
       INSERT INTO negocios (nombre, slug, password_hash, telefono, email)
       VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
@@ -66,10 +52,14 @@ export async function POST(request: Request) {
       success: true,
       negocio: nuevoNegocio[0],
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al registrar negocio:', error);
+    // Devolvemos el mensaje exacto de Postgres para identificar la columna/tabla faltante
     return NextResponse.json(
-      { error: 'Error interno al registrar el negocio' },
+      { 
+        error: 'Error interno al registrar el negocio', 
+        detalle: error?.message || String(error) 
+      },
       { status: 500 }
     );
   }
