@@ -60,11 +60,13 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = hashPassword(password);
+    // Definimos el usuario administrador por defecto (usando el email o 'admin')
+    const adminUsuario = email || 'admin';
 
-    // Insertar en la tabla negocios mapeando a 'whatsapp'
+    // Insertar en la tabla negocios incluyendo los campos de administración requeridos por el login
     const nuevoNegocio = await sql`
-      INSERT INTO negocios (nombre, slug, password_hash, whatsapp, email)
-      VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${numeroWhatsapp}, ${email || null})
+      INSERT INTO negocios (nombre, slug, password_hash, whatsapp, email, admin_usuario, admin_password_hash)
+      VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${numeroWhatsapp}, ${email || null}, ${adminUsuario}, ${passwordHash})
       RETURNING id, nombre, slug
     `;
 
