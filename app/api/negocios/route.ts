@@ -18,6 +18,19 @@ function createSlug(text: string): string {
     .replace(/\-\-+/g, '-');
 }
 
+// GET: Listar negocios
+export async function GET() {
+  try {
+    const sql = getSql();
+    const negocios = await sql`SELECT id, nombre, slug, telefono, email FROM negocios ORDER BY id DESC`;
+    return NextResponse.json(negocios);
+  } catch (error: any) {
+    console.error('Error al listar negocios:', error);
+    return NextResponse.json({ error: 'Error al obtener negocios', detalle: error?.message }, { status: 500 });
+  }
+}
+
+// POST: Registrar nuevo negocio
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -25,7 +38,7 @@ export async function POST(request: Request) {
 
     if (!nombre || !password) {
       return NextResponse.json(
-        { error: 'El nombre y la contraseña son obligatorios' },
+        { error: 'El nombre y la contraseña son requeridos' },
         { status: 400 }
       );
     }
@@ -33,6 +46,7 @@ export async function POST(request: Request) {
     const baseSlug = createSlug(nombre);
     const sql = getSql();
 
+    // Validar si el slug ya existe
     const existente = await sql`SELECT id FROM negocios WHERE slug = ${baseSlug}`;
     let finalSlug = baseSlug;
     if (existente.length > 0) {
@@ -41,12 +55,22 @@ export async function POST(request: Request) {
 
     const passwordHash = hashPassword(password);
 
-    // Intentamos hacer la inserción adaptable
-    const nuevoNegocio = await sql`
-      INSERT INTO negocios (nombre, slug, password_hash, telefono, email)
-      VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
-      RETURNING id, nombre, slug
-    `;
+    // Intentar inserción usando columnas estándar
+    let nuevoNegocio;
+    try {
+      nuevoNegocio = await sql`
+        INSERT INTO negocios (nombre, slug, password_hash, telefono, email)
+        VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
+        RETURNING id, nombre, slug
+      `;
+    } catch (insertError: any) {
+      // Fallback si la columna en la BD se llama "password" en lugar de "password_hash"
+      nuevoNegocio = await sql`
+        INSERT INTO negocios (nombre, slug, password, telefono, email)
+        VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
+        RETURNING id, nombre, slug
+      `;
+    }
 
     return NextResponse.json({
       success: true,
@@ -54,7 +78,6 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error('Error al registrar negocio:', error);
-    // Devolvemos el mensaje exacto de Postgres para identificar la columna/tabla faltante
     return NextResponse.json(
       { 
         error: 'Error interno al registrar el negocio', 
