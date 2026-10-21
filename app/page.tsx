@@ -12,7 +12,8 @@ export default function Home() {
   async function cargarNegocios() {
     setLoading(true);
     try {
-      const res = await fetch('/api/turnos'); // O Endpoint para listar comercios
+      // Corregido: Apunta a /api/negocios para listar los comercios correctamente
+      const res = await fetch('/api/negocios');
       const data = await res.json();
       if (Array.isArray(data)) {
         setNegocios(data);
