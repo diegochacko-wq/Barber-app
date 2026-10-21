@@ -2,24 +2,37 @@ import { NextResponse } from 'next/server';
 import { getSql } from '@/lib/db';
 import crypto from 'crypto';
 
-// Función auxiliar para hashing de contraseñas (SHA-256)
+// Hash de contraseña (SHA-256)
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Función auxiliar para generar slug a partir del nombre
+// Generar slug amigable
 function createSlug(text: string): string {
   return text
     .toString()
     .toLowerCase()
     .trim()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Elimina acentos
-    .replace(/\s+/g, '-')            // Reemplaza espacios por guiones
-    .replace(/[^\w\-]+/g, '')        // Remueve caracteres no alfanuméricos
-    .replace(/\-\-+/g, '-');         // Remueve guiones dobles
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-');
 }
 
+// GET: Listar todos los negocios para la página principal
+export async function GET() {
+  try {
+    const sql = getSql();
+    const negocios = await sql`SELECT id, nombre, slug, telefono, email FROM negocios ORDER BY nombre ASC`;
+    return NextResponse.json(negocios);
+  } catch (error) {
+    console.error('Error al listar negocios:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  }
+}
+
+// POST: Registrar un nuevo negocio
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -35,7 +48,6 @@ export async function POST(request: Request) {
     const baseSlug = createSlug(nombre);
     const sql = getSql();
 
-    // Validar si el slug ya existe
     const existente = await sql`SELECT id FROM negocios WHERE slug = ${baseSlug}`;
     let finalSlug = baseSlug;
     if (existente.length > 0) {
@@ -44,7 +56,6 @@ export async function POST(request: Request) {
 
     const passwordHash = hashPassword(password);
 
-    // Insertar nuevo negocio en la base de datos
     const nuevoNegocio = await sql`
       INSERT INTO negocios (nombre, slug, password_hash, telefono, email)
       VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
