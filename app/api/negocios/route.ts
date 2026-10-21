@@ -24,7 +24,7 @@ function createSlug(text: string): string {
 export async function GET() {
   try {
     const sql = getSql();
-    const negocios = await sql`SELECT id, nombre, slug, telefono, email FROM negocios ORDER BY id DESC`;
+    const negocios = await sql`SELECT id, nombre, slug, whatsapp, email FROM negocios ORDER BY id DESC`;
     return NextResponse.json(negocios);
   } catch (error: any) {
     console.error('Error al listar negocios:', error);
@@ -57,10 +57,10 @@ export async function POST(request: Request) {
 
     const passwordHash = hashPassword(password);
 
-    // Insertar en la tabla negocios
+    // Insertar en la tabla negocios usando 'whatsapp'
     const nuevoNegocio = await sql`
-      INSERT INTO negocios (nombre, slug, password_hash, telefono, email)
-      VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
+      INSERT INTO negocios (nombre, slug, password_hash, whatsapp, email)
+      VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || ''}, ${email || null})
       RETURNING id, nombre, slug
     `;
 
