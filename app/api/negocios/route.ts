@@ -36,7 +36,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { nombre, password, telefono, email } = body;
+    // Aceptamos tanto whatsapp como telefono para evitar conflictos de nombres desde el cliente
+    const { nombre, password, telefono, whatsapp, email } = body;
 
     if (!nombre || !password) {
       return NextResponse.json(
@@ -44,6 +45,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // Garantizamos que la variable whatsapp tenga valor y no sea null
+    const numeroWhatsapp = whatsapp || telefono || '';
 
     const baseSlug = createSlug(nombre);
     const sql = getSql();
@@ -57,10 +61,10 @@ export async function POST(request: Request) {
 
     const passwordHash = hashPassword(password);
 
-    // Insertar en la tabla negocios usando 'whatsapp'
+    // Insertar en la tabla negocios mapeando a 'whatsapp'
     const nuevoNegocio = await sql`
       INSERT INTO negocios (nombre, slug, password_hash, whatsapp, email)
-      VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || ''}, ${email || null})
+      VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${numeroWhatsapp}, ${email || null})
       RETURNING id, nombre, slug
     `;
 
