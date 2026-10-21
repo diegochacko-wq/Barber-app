@@ -5,39 +5,28 @@ import { COOKIE_MAX_AGE, COOKIE_NAME, crearToken, verifyPassword } from '@/lib/a
 export async function POST(request: Request) {
   try {
     const sql = getSql();
-    const body = await request.json();
-    const { slug, usuario, password } = body;
+    const { slug, usuario, password } = await request.json();
 
-    // Si el formulario envía email o usuario genérico, lo adaptamos
-    const userIdentifier = usuario || body.email;
-
-    if (!slug || !userIdentifier || !password) {
+    if (!slug || !usuario || !password) {
       return NextResponse.json({ error: 'Completá usuario y contraseña' }, { status: 400 });
     }
 
     const filas = await sql`
-      SELECT admin_usuario, admin_password_hash, password_hash
+      SELECT admin_usuario, admin_password_hash
       FROM negocios
       WHERE slug = ${slug}
       LIMIT 1
     `;
-    
     const negocio = filas[0];
 
-    if (!negocio) {
-      return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
-    }
+    const ok =
+      !!negocio?.admin_usuario &&
+      !!negocio?.admin_password_hash &&
+      String(negocio.admin_usuario).toLowerCase() === String(usuario).trim().toLowerCase() &&
+      verifyPassword(String(password), negocio.admin_password_hash);
 
-    // Verificamos contra admin_password_hash o password_hash por compatibilidad
-    const passwordHashToCheck = negocio.admin_password_hash || negocio.password_hash;
-    const adminUserMatch = String(negocio.admin_usuario || '').toLowerCase() === String(userIdentifier).trim().toLowerCase() ||
-                           String(body.email || '').toLowerCase() === String(userIdentifier).trim().toLowerCase();
-
-    // Verificamos la contraseña (asumiendo que verifyPassword o la comparación de hash funciona)
-    const passwordOk = verifyPassword ? verifyPassword(String(password), passwordHashToCheck) : true;
-
-    if (!adminUserMatch || !passwordOk) {
-      await new Promise((r) => setTimeout(r, 600)); // frena ataques de fuerza bruta
+    if (!ok) {
+      await new Promise((r) => setTimeout(r, 600));
       return NextResponse.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 });
     }
 
@@ -49,10 +38,9 @@ export async function POST(request: Request) {
       path: '/',
       maxAge: COOKIE_MAX_AGE,
     });
-
     return res;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en login:', error);
-    return NextResponse.json({ error: 'Error interno del servidor', detalle: error?.message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
