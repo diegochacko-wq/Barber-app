@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { getSql } from '@/lib/db';
 import crypto from 'crypto';
 
+// Hash de contraseña (SHA-256)
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
+// Generar slug amigable
 function createSlug(text: string): string {
   return text
     .toString()
@@ -18,7 +20,7 @@ function createSlug(text: string): string {
     .replace(/\-\-+/g, '-');
 }
 
-// GET: Listar negocios
+// GET: Listar todos los negocios para la página principal
 export async function GET() {
   try {
     const sql = getSql();
@@ -30,7 +32,7 @@ export async function GET() {
   }
 }
 
-// POST: Registrar nuevo negocio
+// POST: Registrar un nuevo negocio
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
 
     if (!nombre || !password) {
       return NextResponse.json(
-        { error: 'El nombre y la contraseña son requeridos' },
+        { error: 'El nombre y la contraseña son obligatorios' },
         { status: 400 }
       );
     }
@@ -55,22 +57,12 @@ export async function POST(request: Request) {
 
     const passwordHash = hashPassword(password);
 
-    // Intentar inserción usando columnas estándar
-    let nuevoNegocio;
-    try {
-      nuevoNegocio = await sql`
-        INSERT INTO negocios (nombre, slug, password_hash, telefono, email)
-        VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
-        RETURNING id, nombre, slug
-      `;
-    } catch (insertError: any) {
-      // Fallback si la columna en la BD se llama "password" en lugar de "password_hash"
-      nuevoNegocio = await sql`
-        INSERT INTO negocios (nombre, slug, password, telefono, email)
-        VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
-        RETURNING id, nombre, slug
-      `;
-    }
+    // Insertar en la tabla negocios
+    const nuevoNegocio = await sql`
+      INSERT INTO negocios (nombre, slug, password_hash, telefono, email)
+      VALUES (${nombre}, ${finalSlug}, ${passwordHash}, ${telefono || null}, ${email || null})
+      RETURNING id, nombre, slug
+    `;
 
     return NextResponse.json({
       success: true,
